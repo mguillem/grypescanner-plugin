@@ -2,10 +2,10 @@ package io.jenkins.plugins.grypescanner;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
@@ -19,26 +19,32 @@ import java.util.Map;
 public class GrypeScanner
 {
   private static final String GRYPE_INSTALL_SCRIPT = "https://raw.githubusercontent.com/anchore/grype/main/install.sh";
-  private static final String GRYPE_INSTALL_DIR = "/tmp/grypeInstallDir";
-  private static final String GRYPE_INSTALL_SCRIPT_LOCAL = GRYPE_INSTALL_DIR + File.separator
-      + "grypeInstallSrcript.sh";
-  private static final String GRYPE_DEFAULT_TPL = GRYPE_INSTALL_DIR + File.separator + "default.tmpl";
+  private String grypeInstallDir = "/tmp/grypeInstallDir";
+  private String grypeInstallScript = grypeInstallDir + File.separator + "grypeInstallSrcript.sh";
+  private String grypeTpl = grypeInstallDir + File.separator + "default.tmpl";
+  private String grypeBinary = grypeInstallDir + File.separator + "grype";
+  private String grypeOutputRep = grypeInstallDir + File.separator + "report.txt";
+  private String SCAN_TARGET = "dir:/tmp";
+  private PrintStream logger = System.out;
 
-  private static final String GRYPE_BINARY = GRYPE_INSTALL_DIR + File.separator + "grype";
-  
-  private static final String GRYPE_OUTPUT_REPORT = GRYPE_INSTALL_DIR + File.separator + "report.txt";
-
-  private static final String SCAN_TARGET = "dir:/tmp";
-
-  public static void downloadGrype() throws IOException
+  public GrypeScanner(PrintStream logger, String grypeInstallDir)
   {
-    copyResource(new URL(GRYPE_INSTALL_SCRIPT), GRYPE_INSTALL_SCRIPT_LOCAL);
+    this.logger = logger;
+    this.grypeInstallDir = grypeInstallDir;
+    grypeInstallScript = grypeInstallDir + File.separator + "grypeInstallSrcript.sh";
+    grypeTpl = grypeInstallDir + File.separator + "default.tmpl";
+    grypeBinary = grypeInstallDir + File.separator + "grype";
+    grypeOutputRep = grypeInstallDir + File.separator + "report.txt";
   }
 
-  private static void copyResource(URL url, String dest)
-      throws IOException, FileNotFoundException
+  public void downloadGrype() throws IOException
   {
-    Files.createDirectories(Paths.get(GRYPE_INSTALL_DIR));
+    copyResource(new URL(GRYPE_INSTALL_SCRIPT), grypeInstallScript);
+  }
+
+  private void copyResource(URL url, String dest) throws IOException
+  {
+    Files.createDirectories(Paths.get(grypeInstallDir));
     try (ReadableByteChannel rbc = Channels.newChannel(url.openStream());
         FileOutputStream fos = new FileOutputStream(dest))
     {
@@ -46,19 +52,19 @@ public class GrypeScanner
     }
   }
 
-  public static void installGrype() throws IOException, InterruptedException
+  public void installGrype() throws IOException, InterruptedException
   {
-    exec(null, "sh", GRYPE_INSTALL_SCRIPT_LOCAL, "-b", GRYPE_INSTALL_DIR);
+    exec(null, "sh", grypeInstallScript, "-b", grypeInstallDir);
   }
 
-  private static void exec(Map<String, String> env, String... params) throws IOException, InterruptedException
+  private void exec(Map<String, String> env, String... params) throws IOException, InterruptedException
   {
     ProcessBuilder processBuilder = new ProcessBuilder(params);
     if (env != null && !env.isEmpty())
     {
       processBuilder.environment().putAll(env);
     }
-    System.out.println("Executing: " + Arrays.toString(params));
+    logger.println("Executing: " + Arrays.toString(params));
     Process process = processBuilder.start();
     try (InputStreamReader inp = new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8);
         InputStreamReader errStream = new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8);
@@ -68,40 +74,46 @@ public class GrypeScanner
       String line;
       while ((line = reader.readLine()) != null)
       {
-        System.out.println(line);
+        logger.println(line);
       }
 
       while ((line = errReader.readLine()) != null)
       {
-        System.out.println(line);
+        logger.println(line);
       }
     }
     int exitCode = process.waitFor();
-    System.out.println("\nExited with error code : " + exitCode);
+    logger.println("Exited with error code : " + exitCode);
   }
 
-  public static void executeGrype() throws IOException, InterruptedException
+  public void executeGrype() throws IOException, InterruptedException
   {
-    copyResource(GrypeScanner.class.getResource("/default.tmpl"),GRYPE_DEFAULT_TPL);
+    copyResource(GrypeScanner.class.getResource("/default.tmpl"), grypeTpl);
     Map<String, String> env = new HashMap<>();
-    env.put("GRYPE_DB_CACHE_DIR", GRYPE_INSTALL_DIR);
-    exec(env, GRYPE_BINARY, SCAN_TARGET, "-o", "template", "-t", GRYPE_DEFAULT_TPL, "--file", GRYPE_OUTPUT_REPORT );
+    env.put("GRYPE_DB_CACHE_DIR", grypeInstallDir);
+    exec(env, grypeBinary, SCAN_TARGET, "-o", "template", "-t", grypeTpl, "--file", grypeOutputRep);
   }
 
-  public static void updateGrypeDb() throws IOException, InterruptedException
+  public void updateGrypeDb() throws IOException, InterruptedException
   {
     Map<String, String> env = new HashMap<>();
-    env.put("GRYPE_DB_CACHE_DIR", GRYPE_INSTALL_DIR);
-    exec(env, GRYPE_BINARY, "db", "update");
+    env.put("GRYPE_DB_CACHE_DIR", grypeInstallDir);
+    exec(env, grypeBinary, "db", "update");
   }
 
   public static void main(String[] args) throws IOException, InterruptedException
   {
     System.out.println("start");
+    GrypeScanner gs = new GrypeScanner(System.out, "/tmp/grypeInstallDir");
+    gs.downloadGrype();
+    gs.installGrype();
+    gs.updateGrypeDb();
+    gs.executeGrype();
+    
     // downloadGrype();
     // installGrype();
     // updateGrypeDb();
-    executeGrype();
+    // executeGrype(System.out);
     System.out.println("end");
   }
 }

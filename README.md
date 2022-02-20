@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Jenkins integration of Grype vulnerability scanner for container images and filesystems (https://github.com/anchore/grype).
+Jenkins integration of Grype vulnerability scanner for container images and filesystems, see https://github.com/anchore/grype.
 
 ## Getting started
 
