@@ -1,4 +1,4 @@
 <?jelly escape-by-default='true'?>
 <div>
-  GRYPEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+  This plugin integrates grype - vulnerability scanner for container images and filesystems, see https://github.com/anchore/grype.   
 </div>

@@ -10,4 +10,12 @@
     Creates a text field that shows the value of the "name" property.
     When submitted, it will be passed to the corresponding constructor parameter.
   -->
+<f:entry title="Scan destination" field="scanDest">
+<f:textbox default="${descriptor.getDefaultScanDest()}"/>
+ </f:entry>
+ 
+ <f:entry title="Name of resut report" field="repName">
+<f:textbox default="${descriptor.getDefaultRepName()}"/>
+ </f:entry>
+ 
 </j:jelly>

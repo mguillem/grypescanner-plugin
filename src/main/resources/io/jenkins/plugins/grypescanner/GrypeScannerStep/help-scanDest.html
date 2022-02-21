@@ -1,0 +1,11 @@
+<div>
+ <p>Scan targets can be explicitly provided with a following <a href="https://github.com/anchore/grype">scheme</a>:</p>
+ <ul>
+<li>docker:yourrepo/yourimage:tag          use images from the Docker daemon</li>
+<li>docker-archive:path/to/yourimage.tar   use a tarball from disk for archives created from "docker save"</li>
+<li>oci-archive:path/to/yourimage.tar      use a tarball from disk for OCI archives (from Skopeo or otherwise)</li>
+<li>oci-dir:path/to/yourimage              read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)</li>
+<li>dir:path/to/yourproject                read directly from a path on disk (any directory)</li>
+<li>registry:yourrepo/yourimage:tag        pull image directly from a registry (no container runtime required)</li>
+ </ul>
+</div>

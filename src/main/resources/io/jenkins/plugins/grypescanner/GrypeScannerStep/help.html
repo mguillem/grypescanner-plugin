@@ -1,3 +1,14 @@
 <div>
-  If checked, plugin enables java script vnc viewer for configured VNC session. VNC viewer can be started via HTML link in 'Console output' <br>
+	A <a href="https://github.com/anchore/grype">vulnerability scanner</a>
+	for container images and filesystems.
+
+	<p>
+		<strong>Usage in a pipeline:</strong><br> pipeline <br>{<br>
+		&nbsp;agent
+		any<br> &nbsp;options {<br> &nbsp;skipStagesAfterUnstable()<br> }<br>
+		stages <br> {<br>&nbsp;stage('Build')<br>&nbsp;{<br>&nbsp;&nbsp;steps<br>&nbsp;&nbsp;{<br>
+		&nbsp;&nbsp;step([$class: 'GrypeScannerStep', scanDest: 'dir:/tmp', repName:
+		'myScanResult.txt'])<br>&nbsp;&nbsp;}<br>&nbsp;}<br> }<br> }<br>
+	</p>
+
 </div>
