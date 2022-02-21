@@ -25,7 +25,7 @@ See section [https://github.com/anchore/grype](Installation/Recommended) for mor
 <img src="images/5.png" alt="Grype plugin" />
      
 
-###Usage in a pipeline:
+### Usage in a pipeline:
 pipeline  
 {  
 &nbsp;agent any  
