@@ -2,20 +2,18 @@ package io.jenkins.plugins.grypescanner;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.commons.lang.SystemUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractProject;
+import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.ArtifactArchiver;
@@ -31,13 +29,15 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
 
   private String scanDest;
   private String repName;
+  private Boolean autoInstall;
 
   // Fields in config.jelly must match the parameter names in the "DataBoundConstructor"
   @DataBoundConstructor
-  public GrypeScannerStep(String scanDest, String repName)
+  public GrypeScannerStep(String scanDest, String repName, Boolean autoInstall)
   {
     this.scanDest = scanDest;
     this.repName = repName;
+    this.autoInstall = autoInstall;
   }
 
   @Override
@@ -46,43 +46,58 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
   {
     if (!SystemUtils.IS_OS_UNIX)
     {
-      listener.getLogger().println("Thy grypescanner requires a unix system, see https://github.com/anchore/grype for system requirements.");
+      listener.fatalError(
+          "The grypescanner requires a unix system, see https://github.com/anchore/grype for system requirements");
+      run.setResult(Result.FAILURE);
       return;
+    }
+    if (Boolean.FALSE.equals(autoInstall))
+    {
+      int ret = launcher.launch().cmds("which", "grype").envs(env).stdout(listener).stderr(listener.getLogger()).join();
+      listener.getLogger().println("return value: " + ret);
+      if (ret != 0)
+      {
+        listener.fatalError(
+            "Can't find 'grype' in PATH! Please, ensure that 'grype' is available in PATH or activate the 'Download and install grype automatically' setting!");
+        run.setResult(Result.FAILURE);
+        return;
+      }
     }
     String scanDestresolved = Util.replaceMacro(scanDest, run.getEnvironment(listener));
     String repNameResolved = Util.replaceMacro(repName, run.getEnvironment(listener));
 
-    FilePath grypeInstallDir = workspace.child("grypeInstallDir");
-    grypeInstallDir.mkdirs();
-    env.put("GRYPE_DB_CACHE_DIR", grypeInstallDir.toURI().getPath());
-
-    FilePath script = grypeInstallDir.child("install.sh");
-    FilePath grypeBinary = grypeInstallDir.child("grype");
-    FilePath resultReport = grypeInstallDir.child(repNameResolved);
-    FilePath templateFile = grypeInstallDir.child("default.tmpl");
-    script.copyFrom(new URL("https://raw.githubusercontent.com/anchore/grype/main/install.sh"));
-
-    launcher.launch().cmds("hostname").envs(env).stdout(listener).stderr(listener.getLogger()).pwd(workspace).join();
-
-    listener.getLogger().println("Installing grype on destination:");
-    int ret = launcher.launch().cmds("sh", script.toURI().getPath(), "-b", grypeInstallDir.toURI().getPath()).envs(env)
-        .stdout(listener).stderr(listener.getLogger()).pwd(workspace).join();
-    listener.getLogger().println("return value: " + ret);
-
-    listener.getLogger().println("Updating grype database:");
-    ret = launcher.launch().cmds(grypeBinary.toURI().getPath(), "db", "update").envs(env).stdout(listener)
-        .stderr(listener.getLogger()).pwd(grypeInstallDir).join();
-    listener.getLogger().println("return value: " + ret);
-
-    templateFile.copyFrom(GrypeScanner.class.getResource("/default.tmpl"));
+    FilePath grypeTmpDir = workspace.child("grypeTmpDir");
+    FilePath templateFile = grypeTmpDir.child("default.tmpl");
+    grypeTmpDir.mkdirs();
+    templateFile.copyFrom(GrypeScannerStep.class.getResource("/default.tmpl"));
     listener.getLogger().println("Running grype scan: ");
-    ret = launcher.launch()
-        .cmds(grypeBinary.toURI().getPath(), scanDestresolved, "-o", "template", "-t", templateFile.toURI().getPath(),
-            "--file", resultReport.toURI().getPath())
-        .envs(env).stdout(listener).stderr(listener.getLogger()).pwd(grypeInstallDir).join();
-    listener.getLogger().println("return value: " + ret);
+    FilePath resultReport = grypeTmpDir.child(repNameResolved);
+    if (Boolean.TRUE.equals(autoInstall))
+    {
+      env.put("GRYPE_DB_CACHE_DIR", grypeTmpDir.toURI().getPath());
+      FilePath script = grypeTmpDir.child("install.sh");
+      FilePath grypeBinary = grypeTmpDir.child("grype");
+      script.copyFrom(new URL("https://raw.githubusercontent.com/anchore/grype/main/install.sh"));
+      listener.getLogger().println("Installing grype on destination:");
+      int ret = launcher.launch().cmds("sh", script.toURI().getPath(), "-b", grypeTmpDir.toURI().getPath()).envs(env)
+          .stdout(listener).stderr(listener.getLogger()).pwd(workspace).join();
+      listener.getLogger().println("return value: " + ret);
+      ret = launcher.launch()
+          .cmds(grypeBinary.toURI().getPath(), scanDestresolved, "-o", "template", "-t", templateFile.toURI().getPath(),
+              "--file", resultReport.toURI().getPath())
+          .envs(env).stdout(listener).stderr(listener.getLogger()).pwd(grypeTmpDir).join();
+      listener.getLogger().println("return value: " + ret);
+    }
+    else
+    {
+      int ret = launcher.launch()
+          .cmds("grype", scanDestresolved, "-o", "template", "-t", templateFile.toURI().getPath(), "--file",
+              resultReport.toURI().getPath(), "--file", resultReport.toURI().getPath())
+          .envs(env).stdout(listener).stderr(listener.getLogger()).pwd(grypeTmpDir).join();
+      listener.getLogger().println("return value: " + ret);
+    }
 
-    ArtifactArchiver artifactArchiver = new ArtifactArchiver("grypeInstallDir/" + repNameResolved);
+    ArtifactArchiver artifactArchiver = new ArtifactArchiver("grypeTmpDir/" + repNameResolved);
     artifactArchiver.perform(run, workspace, env, launcher, listener);
   }
 
@@ -104,6 +119,16 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
   public void setRepName(String repName)
   {
     this.repName = repName;
+  }
+
+  public Boolean getAutoInstall()
+  {
+    return autoInstall;
+  }
+
+  public void setAutoInstall(Boolean autoInstall)
+  {
+    this.autoInstall = autoInstall;
   }
 
   @Extension(ordinal = -2)

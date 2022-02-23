@@ -18,4 +18,9 @@
 <f:textbox default="${descriptor.getDefaultRepName()}"/>
  </f:entry>
  
+ <f:entry field="autoInstall">
+      <f:checkbox default="false"/>
+      <label>${%Download and install grype automatically }</label>
+  </f:entry> 
+ 
 </j:jelly>
