@@ -9,6 +9,8 @@ import org.apache.commons.lang.SystemUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -26,7 +28,7 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
 {
   private static final String SCAN_TARGET_DEFAULT = "dir:/";
   private static final String REP_NAME_DEFAULT = "grypeReport_${JOB_NAME}_${BUILD_NUMBER}.txt";
-  
+
   private String scanDest;
   private String repName;
 
@@ -39,15 +41,19 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
   }
 
   @Override
-  public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
+  public void perform(Run<?, ?> run, FilePath workspace, EnvVars env, Launcher launcher, TaskListener listener)
       throws InterruptedException, IOException
   {
+    if (!SystemUtils.IS_OS_UNIX)
+    {
+      listener.getLogger().println("Thy grypescanner requires a unix system, see https://github.com/anchore/grype for system requirements.");
+      return;
+    }
     String scanDestresolved = Util.replaceMacro(scanDest, run.getEnvironment(listener));
     String repNameResolved = Util.replaceMacro(repName, run.getEnvironment(listener));
-    
+
     FilePath grypeInstallDir = workspace.child("grypeInstallDir");
     grypeInstallDir.mkdirs();
-    Map<String, String> env = new HashMap<>();
     env.put("GRYPE_DB_CACHE_DIR", grypeInstallDir.toURI().getPath());
 
     FilePath script = grypeInstallDir.child("install.sh");
@@ -58,8 +64,7 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
 
     launcher.launch().cmds("hostname").envs(env).stdout(listener).stderr(listener.getLogger()).pwd(workspace).join();
 
-    listener.getLogger().println(
-        "Installing grype on destination:");
+    listener.getLogger().println("Installing grype on destination:");
     int ret = launcher.launch().cmds("sh", script.toURI().getPath(), "-b", grypeInstallDir.toURI().getPath()).envs(env)
         .stdout(listener).stderr(listener.getLogger()).pwd(workspace).join();
     listener.getLogger().println("return value: " + ret);
@@ -78,7 +83,7 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
     listener.getLogger().println("return value: " + ret);
 
     ArtifactArchiver artifactArchiver = new ArtifactArchiver("grypeInstallDir/" + repNameResolved);
-    artifactArchiver.perform(run, workspace, launcher, listener);
+    artifactArchiver.perform(run, workspace, env, launcher, listener);
   }
 
   public String getScanDest()
@@ -119,7 +124,6 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
       return true;
     }
 
-    
     public String getDefaultScanDest()
     {
       return SCAN_TARGET_DEFAULT;
@@ -139,7 +143,7 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
     @Override
     public boolean isApplicable(Class<? extends AbstractProject> jobType)
     {
-      return !SystemUtils.IS_OS_WINDOWS;
+      return true;
     }
   }
 }
