@@ -8,7 +8,7 @@ This jenkins plugin scans a given target and saves a report as job artifact.
 
 ## Getting started
 This jenkins plugin installs grype in the job workspace directory and performs scan. 
-See section [https://github.com/anchore/grype](Installation/Recommended) for more details.
+See section [Installation/Recommended](https://github.com/anchore/grype) for more installation details.
  
 
 #### Grype as a build step:
@@ -25,7 +25,7 @@ See section [https://github.com/anchore/grype](Installation/Recommended) for mor
 <img src="images/5.png" alt="Grype plugin" />
      
 
-###Usage in a pipeline:
+### Usage in a pipeline:
 pipeline  
 {  
 &nbsp;agent any  
