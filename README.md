@@ -13,6 +13,7 @@ See section [Installation/Recommended](https://github.com/anchore/grype) for mor
 
 #### Grype as a build step:
 <img src="images/1.png" alt="Grype plugin" />
+
 <img src="images/2.png" alt="Grype plugin" />
 
 #### Possible scan targets:
