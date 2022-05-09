@@ -44,7 +44,8 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
   public void perform(Run<?, ?> run, FilePath workspace, EnvVars env, Launcher launcher, TaskListener listener)
       throws InterruptedException, IOException
   {
-    if (!SystemUtils.IS_OS_UNIX)
+
+    if (!launcher.isUnix())
     {
       listener.fatalError(
           "The grypescanner requires a unix system, see https://github.com/anchore/grype for system requirements");
