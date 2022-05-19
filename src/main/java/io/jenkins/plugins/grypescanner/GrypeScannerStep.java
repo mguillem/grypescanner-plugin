@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.apache.commons.lang.SystemUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -135,6 +136,7 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
   }
 
   @Extension(ordinal = -2)
+  @Symbol("grypeScan")
   public static final class DescriptorImpl extends BuildStepDescriptor<Builder>
   {
 
