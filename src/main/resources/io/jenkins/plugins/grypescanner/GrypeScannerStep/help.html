@@ -3,12 +3,23 @@
 	for container images and filesystems.
 
 	<p>
-		<strong>Usage in a pipeline:</strong><br> pipeline <br>{<br>
-		&nbsp;agent
-		any<br> &nbsp;options {<br> &nbsp;skipStagesAfterUnstable()<br> }<br>
-		stages <br> {<br>&nbsp;stage('Build')<br>&nbsp;{<br>&nbsp;&nbsp;steps<br>&nbsp;&nbsp;{<br>
-		&nbsp;&nbsp;step([$class: 'GrypeScannerStep', scanDest: 'dir:/tmp', repName:
-		'myScanResult.txt'])<br>&nbsp;&nbsp;}<br>&nbsp;}<br> }<br> }<br>
+		<strong>Usage in a pipeline:</strong><br>
+		pipeline <br>{<br>
+		&nbsp;agent any<br>
+		&nbsp;options {<br>
+		&nbsp;&nbsp;skipStagesAfterUnstable()<br>
+		&nbsp;}<br>
+		&nbsp;stages <br>
+		&nbsp;{<br>
+		&nbsp;stage('Build')<br>
+		&nbsp;{<br>
+		&nbsp;&nbsp;steps<br>
+		&nbsp;&nbsp;{<br>
+		&nbsp;&nbsp;grypeScan scanDest: 'dir:/tmp', repName: 'myScanResult.txt'<br>
+		&nbsp;&nbsp;}<br>
+		&nbsp;}<br>
+		}<br> 
+		}<br>
 	</p>
 
 </div>
