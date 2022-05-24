@@ -3,7 +3,6 @@ package io.jenkins.plugins.grypescanner;
 import java.io.IOException;
 import java.net.URL;
 
-import org.apache.commons.lang.SystemUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -25,7 +24,7 @@ import net.sf.json.JSONObject;
 
 public class GrypeScannerStep extends Builder implements SimpleBuildStep
 {
-  private static final String SCAN_TARGET_DEFAULT = "dir:/";
+  private static final String SCAN_TARGET_DEFAULT = "dir:./";
   private static final String REP_NAME_DEFAULT = "grypeReport_${JOB_NAME}_${BUILD_NUMBER}.txt";
 
   private String scanDest;
@@ -69,9 +68,11 @@ public class GrypeScannerStep extends Builder implements SimpleBuildStep
     String repNameResolved = Util.replaceMacro(repName, run.getEnvironment(listener));
 
     FilePath grypeTmpDir = workspace.child("grypeTmpDir");
-    FilePath templateFile = grypeTmpDir.child("default.tmpl");
     grypeTmpDir.mkdirs();
-    templateFile.copyFrom(GrypeScannerStep.class.getResource("/default.tmpl"));
+
+    FilePath templateFile = grypeTmpDir.child("default.tmpl");
+    templateFile.copyFrom(getClass().getResource("default.tmpl"));
+
     listener.getLogger().println("Running grype scan: ");
     FilePath resultReport = workspace.child(repNameResolved);
     final String grypeCmd;
